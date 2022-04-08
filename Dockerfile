@@ -1,4 +1,4 @@
-FROM node:14.16-alpine
+FROM node:16.14-alpine
 
 WORKDIR /home/server-node-ts
 

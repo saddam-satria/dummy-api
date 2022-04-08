@@ -142,10 +142,43 @@ const Delete = async (req: Request, res: Response) => {
   }
 };
 
+const update = async (req: Request, res: Response) => {
+  response.service = {
+    service: 'BOOK',
+    message: 'UPDATE BOOK',
+  };
+  response.error = null;
+  response.status = 'success';
+  response.data = null;
+
+  const { id } = req.query;
+  const { name, category, cover, publisher, years } = req.body;
+  try {
+    if (!id) throw new Error('required id');
+    if (!name || !category) throw new Error('required name or category body');
+    const updatedBook = await book.updateBook(id as string, { name, category, cover, publisher, years });
+
+    response.data = {
+      data: updatedBook,
+    };
+
+    return res.status(200).json(response);
+  } catch (error) {
+    response.error = {
+      message: error.message,
+    };
+
+    response.data = null;
+    response.status = 'error';
+    return res.status(400).json(response);
+  }
+};
+
 const bookController = {
   get,
   post,
   delete: Delete,
+  update,
 };
 
 export default bookController;

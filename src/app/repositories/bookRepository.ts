@@ -112,6 +112,31 @@ class BookRepository {
       return null;
     }
   }
+  public async updateBook(id: string, { category, cover, name, publisher, years }: IBook) {
+    try {
+      return await this.BookEntity.update({
+        where: {
+          id,
+        },
+        data: {
+          name,
+          publisher,
+          years,
+          cover,
+          category: {
+            update: {
+              name: category,
+            },
+          },
+          updated_at: new Date(),
+        },
+      });
+    } catch (error) {
+      if (error.meta && error.meta.details) throw new Error(error.meta.details);
+
+      return null;
+    }
+  }
 }
 
 export default BookRepository;
