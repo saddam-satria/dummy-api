@@ -19,6 +19,17 @@ interface IResponse<T> {
   service: IService;
   status: string;
   error: IError | null;
+  user?: string | null;
 }
 
-export { IResponse };
+interface IAuthenticate {
+  jwtToken: string | null;
+  uuid: string | null;
+}
+
+interface ITokenPayload {
+  uuid: string;
+  username: string;
+}
+
+export { IResponse, IAuthenticate, ITokenPayload };

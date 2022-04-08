@@ -17,9 +17,12 @@ model User{
   password String? @default("testing") 
   created_at DateTime @default(now())
   updated_at DateTime?
+  book Book[]
 }
 
 model Book {
+  user User? @relation(fields: [user_id], references: [id])
+  user_id String?
   id String @id @unique @default(uuid())
   name String @db.VarChar(200)
   years String? @db.VarChar(4)

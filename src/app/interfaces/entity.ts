@@ -4,6 +4,12 @@ interface IBook {
   publisher: string;
   cover: string;
   category: string;
+  user?: string;
 }
 
-export { IBook };
+interface IUser {
+  username: string;
+  password: string;
+}
+
+export { IBook, IUser };

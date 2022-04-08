@@ -1,11 +1,11 @@
-import { Book } from '@prisma/client';
+import { Book, Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
 import { IBook } from '../interfaces/entity';
 import { IResponse } from '../interfaces/response';
 import BookRepository from '../repositories/bookRepository';
 
 const book = new BookRepository();
-const response: IResponse<null | Book | Book[]> = {
+const response: IResponse<null | Book | Book[] | Prisma.BatchPayload> = {
   data: null,
   error: null,
   service: {
@@ -22,10 +22,15 @@ const get = async (req: Request, res: Response) => {
   response.status = 'success';
   response.data = null;
 
+  const { currentUser } = res.locals;
+
   try {
+    if (!currentUser) throw new Error('not allowed');
+
+    response.user = currentUser.username;
     if (id && !name) {
       response.data = {
-        data: await book.getByID(id as string),
+        data: await book.getByID(id as string, currentUser.uuid),
       };
 
       response.service.message = 'GET BOOK BY ID';
@@ -35,14 +40,14 @@ const get = async (req: Request, res: Response) => {
 
     if (!id && name) {
       response.data = {
-        data: await book.getByName(name as string),
+        data: await book.getByName(name as string, currentUser.uuid),
       };
       response.service.message = 'GET BOOK BY NAME';
 
       return res.status(200).json(response);
     }
 
-    const books = page ? await book.getAll(parseInt((page as string).toString())) : await book.getAll();
+    const books = page ? await book.getAll(parseInt((page as string).toString()), currentUser.uuid) : await book.getAll(undefined, currentUser.uuid);
 
     response.data = {
       data: books,
@@ -79,9 +84,14 @@ const post = async (req: Request, res: Response) => {
   response.status = 'success';
   response.data = null;
 
+  const { currentUser } = res.locals;
+
   try {
     if (!name || !category) throw new Error('body name or category required');
-    const newBook = await book.insertBook({ name, category, cover, publisher, years });
+
+    if (!currentUser) throw new Error('Not Allowed');
+    response.user = currentUser.username;
+    const newBook = await book.insertBook({ name, category, cover, publisher, years, user: currentUser.username });
     response.data = {
       data: newBook,
     };
@@ -99,7 +109,6 @@ const post = async (req: Request, res: Response) => {
 };
 
 const Delete = async (req: Request, res: Response) => {
-  const { id } = req.query;
   const { ids } = req.body;
 
   response.service = {
@@ -110,25 +119,22 @@ const Delete = async (req: Request, res: Response) => {
   response.status = 'success';
   response.data = null;
 
+  const { currentUser } = res.locals;
+
   try {
-    if (!id && !ids) throw new Error('Required ID');
+    if (!ids) throw new Error('Required ID');
 
-    if (id && !ids) {
-      response.data = {
-        data: await book.deleteBook(id as string),
-      };
-      response.service.message = 'DELETE BOOK ';
+    if (!currentUser) throw new Error('Not Allowed');
 
-      return res.status(200).json(response);
-    }
+    response.user = currentUser.username;
 
-    await book.deleteBooks(ids);
+    await book.deleteBooks(ids, currentUser.uuid);
 
     response.data = {
       data: ids,
     };
 
-    response.service.message = 'DELETE BOOKS BACTHING PROCESS';
+    response.service.message = ids.length > 1 ? 'DELETE BOOKS BACTHING PROCESS' : 'DELETE BOOK';
 
     return res.status(200).json(response);
   } catch (error) {
@@ -153,10 +159,14 @@ const update = async (req: Request, res: Response) => {
 
   const { id } = req.query;
   const { name, category, cover, publisher, years } = req.body;
+  const { currentUser } = res.locals;
   try {
     if (!id) throw new Error('required id');
     if (!name || !category) throw new Error('required name or category body');
-    const updatedBook = await book.updateBook(id as string, { name, category, cover, publisher, years });
+    if (!currentUser) throw new Error('Not Allowed');
+
+    response.user = currentUser.username;
+    const updatedBook = await book.updateBook(id as string, { category, name, cover, publisher, years, user: currentUser.uuid });
 
     response.data = {
       data: updatedBook,

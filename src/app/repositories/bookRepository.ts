@@ -8,11 +8,14 @@ class BookRepository {
     this.BookEntity = prisma.book;
   }
 
-  public async getAll(page = 1): Promise<Book[] | null> {
+  public async getAll(page = 1, user?: string): Promise<Book[] | null> {
     try {
       const books = await this.BookEntity.findMany({
         take: 10,
         skip: (page - 1) * 10,
+        where: {
+          user_id: user,
+        },
       });
 
       return books;
@@ -21,11 +24,14 @@ class BookRepository {
       return null;
     }
   }
-  public async getByID(id: string): Promise<Book | null> {
+  public async getByID(id: string, user?: string): Promise<Book | null> {
     try {
       const book = await this.BookEntity.findFirst({
         where: {
           id,
+          AND: {
+            user_id: user,
+          },
         },
       });
 
@@ -37,12 +43,15 @@ class BookRepository {
       return null;
     }
   }
-  public async getByName(name: string): Promise<Book[] | null> {
+  public async getByName(name: string, user?: string): Promise<Book[] | null> {
     try {
       const book = await this.BookEntity.findMany({
         where: {
           name: {
             contains: name,
+          },
+          AND: {
+            user_id: user,
           },
         },
       });
@@ -56,7 +65,7 @@ class BookRepository {
       return null;
     }
   }
-  public async insertBook({ name, category, cover, publisher, years }: IBook): Promise<Book | null> {
+  public async insertBook({ name, category, cover, publisher, years, user }: IBook): Promise<Book | null> {
     try {
       return await this.BookEntity.create({
         data: {
@@ -74,6 +83,11 @@ class BookRepository {
           cover,
           publisher,
           years,
+          user: {
+            connect: {
+              username: user,
+            },
+          },
         },
       });
     } catch (error) {
@@ -93,12 +107,15 @@ class BookRepository {
       return null;
     }
   }
-  public async deleteBooks(ids: string[]): Promise<number | null> {
+  public async deleteBooks(ids: string[], user: string): Promise<number | null> {
     try {
       const { count } = await this.BookEntity.deleteMany({
         where: {
           id: {
             in: ids,
+          },
+          AND: {
+            user_id: user,
           },
         },
       });
@@ -112,8 +129,10 @@ class BookRepository {
       return null;
     }
   }
-  public async updateBook(id: string, { category, cover, name, publisher, years }: IBook) {
+  public async updateBook(id: string, { category, cover, name, publisher, years, user }: IBook) {
     try {
+      await this.getByID(id, user);
+
       return await this.BookEntity.update({
         where: {
           id,
@@ -132,6 +151,7 @@ class BookRepository {
         },
       });
     } catch (error) {
+      if (error) throw new Error(error.message);
       if (error.meta && error.meta.details) throw new Error(error.meta.details);
 
       return null;
